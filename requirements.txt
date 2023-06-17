@@ -1,0 +1,7 @@
+fever-drqa==1.0.13
+nltk==3.8.1
+pandas==2.0.2
+scikit-learn==1.2.2
+sentence-transformers==2.2.2
+spacy==3.5.3
+thefuzz==0.19.0
