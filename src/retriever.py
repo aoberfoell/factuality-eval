@@ -23,7 +23,7 @@ import torch
 import torch.nn.functional as F
 
 from src.const import DATA_DIR, HOME_DIR
-# from fever_athene.src.retrieval.fever_doc_db import FeverDocDB
+from fever_athene.src.retrieval.fever_doc_db import FeverDocDB
 
 #Mean Pooling - Take attention mask into account for correct averaging
 def mean_pooling(model_output, attention_mask):

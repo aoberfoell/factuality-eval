@@ -29,6 +29,7 @@ If you use our resource, please cite our work with the bibtex listed below:
 
 ## 1. Setup 
 1. Install dependencies by running `pip install -r requirements.txt`
+    - download spacy model `python -m spacy download en_core_web_sm`
 2. Download Wikipedia processed dump (knowledgesource.json) from [KILT-github](https://github.com/facebookresearch/KILT#kilt-knowledge-source) into `data` directory (Refer to their repository for citation details)
 ```bash
   mkdir data

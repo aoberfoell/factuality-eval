@@ -1,4 +1,3 @@
-
 from ipaddress import _BaseAddress
 from nltk.tokenize import sent_tokenize
 from tqdm import tqdm
@@ -16,7 +15,11 @@ import pandas as pd
 import numpy as np
 import nltk
 from nltk.corpus import stopwords
-stop_words = set(stopwords.words('english'))
+try: 
+    stop_words = set(stopwords.words('english'))
+except:
+    nltk.download('stopwords')
+    stop_words = set(stopwords.words('english'))
 
 from retriever import obtain_relevant_evidences, get_wiki_from_db
 from factuality_metric import nli_metric, ner_metric, nli_metric_batch
