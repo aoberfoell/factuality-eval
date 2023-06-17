@@ -21,6 +21,10 @@ except:
     nltk.download('stopwords')
     stop_words = set(stopwords.words('english'))
 
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.getcwd()))
+
 from retriever import obtain_relevant_evidences, get_wiki_from_db
 from factuality_metric import nli_metric, ner_metric, nli_metric_batch
 

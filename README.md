@@ -1,51 +1,29 @@
 # FactualityPrompt
-![License: Apache](https://img.shields.io/badge/License-Apache2.0-yellow.svg) 
-  
-This repository contains the test prompts and evaluation pipeline used in: "[Factuality Enhanced Language Models for
-Open-Ended Text Generation](https://arxiv.org/pdf/2206.04624.pdf)". _Nayeon Lee, Wei Ping, Peng Xu, Mostofa Patwary, Pascale Fung, Mohammad Shoeybi, and Bryan Catanzaro_. 
-
-This work was done during Nayeon Lee's internship at NVIDIA.
-
-<!-- <img align="right" src="img/HKUST.jpg" width="12%"> -->
-
-If you use our resource, please cite our work with the bibtex listed below:
-```bibtex
-@misc{https://doi.org/10.48550/arxiv.2206.04624,
-  doi = {10.48550/ARXIV.2206.04624},
-  url = {https://arxiv.org/abs/2206.04624},
-  author = {Lee, Nayeon and Ping, Wei and Xu, Peng and Patwary, Mostofa and Fung, Pascale and Shoeybi, Mohammad and Catanzaro, Bryan},
-  keywords = {Computation and Language (cs.CL), Artificial Intelligence (cs.AI), Computers and Society (cs.CY), Machine Learning (cs.LG), FOS: Computer and information sciences, FOS: Computer and information sciences},
-  title = {Factuality Enhanced Language Models for Open-Ended Text Generation},
-  publisher = {arXiv},
-  year = {2022},  
-  copyright = {Creative Commons Attribution 4.0 International}
-}
-```
-
-## Code Overview
-* `fever_athene`: contains fact-checking pipeline code (Wiki document retriever, Wiki sentence selector, etc) from UKPLab/fever-2018-team-athene [github](UKPLab/fever-2018-team-athene). We utilize and build on top of their Wiki document retriever in our work. (Refer to their github for citation details)
-* `prompts`: contains our FactualityPrompt testset utilized in our paper.
-* `src`: codes for evaluating the factualtiy of LM generation (For files adapted from other publicly available codebases, we included the pointer to the original code file)
-
 ## 1. Setup 
 1. Install dependencies by running `pip install -r requirements.txt`
-    - download spacy model `python -m spacy download en_core_web_sm`
+    - download spacy model with `python -m spacy download en_core_web_sm`
 2. Download Wikipedia processed dump (knowledgesource.json) from [KILT-github](https://github.com/facebookresearch/KILT#kilt-knowledge-source) into `data` directory (Refer to their repository for citation details)
 ```bash
   mkdir data
   cd data
   wget http://dl.fbaipublicfiles.com/KILT/kilt_knowledgesource.json
 ```
-3. Create the DB file from Wikipedia dump by running:
+3. Create the DB file from Wikipedia dump by running from dir `fever_athene/src`:
 
 ```bash
-  PYTHONPATH=fever_athene python3 fever_athene/scripts/build_db_kilt.py data/knowledgesource.json data/kilt_db.db
+  python scripts/build_db_kilt.py ../../data/knowledgesource.json ../../data/kilt_db.db
 ```
 This script will create kilt_db.db into `data` directory. 
 
 4. Configure `src/const.py` file. 
 
-## 2. Run evaluation script
+## 2. Create generations
+The file containing the generations is a *.jsonl* file with the following keys:
+- *id*: id of the example
+- *prompt*: the prompt for which the text was generated
+- *text*: the generated text including the prompt?
+
+## 3. Run evaluation script
 Running any of the scripts below will save corresponding metric results into a file named `$GEN_TO_EVALUATE_NAME_results.jsonl` (`$GEN_TO_EVALUATE_NAME` refers to the file containing generations that you are trying to evaluate).
 
 ### Factuality Metric (Hallucinated NE Error, Entailment Ratio)
@@ -56,6 +34,8 @@ do
     GEN_TO_EVALUATE_NAME=${PROMPT_TYPE}-CUSTOM-GEN-NAME.jsonl
     PYTHONPATH=. python src/evaluate_v3_final.py --prompt_type ${PROMPT_TYPE} --gen_path ${GEN_TO_EVALUATE_NAME}
 done
+
+python src/evaluate_v3_final.py --prompt_type factual --gen_path gens.jsonl
 ```
 
 ### Repetition
