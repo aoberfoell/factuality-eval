@@ -19,6 +19,7 @@ try:
     stop_words = set(stopwords.words('english'))
 except:
     nltk.download('stopwords')
+    nltk.download('punkt')
     stop_words = set(stopwords.words('english'))
 
 import os
@@ -171,6 +172,7 @@ def main(args):
         for line in infile:
             gen_obj = json.loads(line.strip())
             gens.append(gen_obj)
+    gens = gens[0]
 
     # DEBUG mode!
     if args.debug_sample_size != None:
