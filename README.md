@@ -1,6 +1,6 @@
 # FactualityPrompt
 ## 1. Setup 
-1. Install dependencies by running `pip install -r requirements.txt`
+1. in console: `pip install -r requirements.txt`
     - download spacy model with `python -m spacy download en_core_web_sm`
 2. Download Wikipedia processed dump (knowledgesource.json) from [KILT-github](https://github.com/facebookresearch/KILT#kilt-knowledge-source) into `data` directory (Refer to their repository for citation details)
 ```bash
@@ -8,20 +8,22 @@
   cd data
   wget http://dl.fbaipublicfiles.com/KILT/kilt_knowledgesource.json
 ```
-3. Create the DB file from Wikipedia dump by running from dir `fever_athene/src`:
+3. Create the DB file *kilt_db.db* from Wikipedia dump by running from dir `fever_athene/src`:
 
 ```bash
   python scripts/build_db_kilt.py ../../data/knowledgesource.json ../../data/kilt_db.db
 ```
-This script will create kilt_db.db into `data` directory. 
 
-4. Configure `src/const.py` file. 
+4. Set paths in `src/const.py`
 
 ## 2. Create generations
 The file containing the generations is a *.jsonl* file with the following keys:
 - *id*: id of the example
 - *prompt*: the prompt for which the text was generated
 - *text*: the generated text including the prompt?
+1. Set params in *run_generations.py*
+2. `python run_generations.py`
+    - file generations is saved to *GEN_DIR*
 
 ## 3. Run evaluation script
 Running any of the scripts below will save corresponding metric results into a file named `$GEN_TO_EVALUATE_NAME_results.jsonl` (`$GEN_TO_EVALUATE_NAME` refers to the file containing generations that you are trying to evaluate).
@@ -29,23 +31,16 @@ Running any of the scripts below will save corresponding metric results into a f
 ### Factuality Metric (Hallucinated NE Error, Entailment Ratio)
 
 ```bash
-for PROMPT_TYPE in factual nonfactual
-do
-    GEN_TO_EVALUATE_NAME=${PROMPT_TYPE}-CUSTOM-GEN-NAME.jsonl
-    PYTHONPATH=. python src/evaluate_v3_final.py --prompt_type ${PROMPT_TYPE} --gen_path ${GEN_TO_EVALUATE_NAME}
-done
-
-python src/evaluate_v3_final.py --prompt_type factual --gen_path gens.jsonl
+PROMPT_TYPE=factual
+GEN_FILENAME=gens.jsonl
+python src/evaluate_v3_final.py --prompt_type ${PROMPT_TYPE} --gen_path ${GEN_FILENAME}
 ```
 
 ### Repetition
 
 ```bash
-for PROMPT_TYPE in factual nonfactual
-do
-    GEN_TO_EVALUATE_NAME=${PROMPT_TYPE}-CUSTOM-GEN-NAME.jsonl
-    python src/repetition.py ${GEN_TO_EVALUATE_NAME}  --final
-done
+GEN_FILENAME=gens.jsonl
+python src/repetition.py ${GEN_FILENAME} --final
 ``` 
 
 ### Diversity
@@ -55,7 +50,6 @@ done
 2. Then run the below script:
 ```bash
 GEN_DIR=directory-containing-multi-seed-generation-files
-
 FILE_TEMPLATE=shared-string-between-multiple-seed-generation
 python src/distinct_n.py --gen_dir ${GEN_DIR} --file_template ${FILE_TEMPLATE} --number_of_seeds 10
 ```
@@ -63,77 +57,3 @@ python src/distinct_n.py --gen_dir ${GEN_DIR} --file_template ${FILE_TEMPLATE} -
 Illustration of `FILE_TEMPLATE`:
 * Let's assume your generation files are named as follows: factual_gen_seed1.jsonl, nonfactual_gen_seed1.jsonl, factual_gen_seed2.jsonl, nonfactual_gen_seed2.jsonl,...
 * Then, your `FILE_TEMPLATE` will be "gen_seed"
-
-
-## 3. Replicating our work with [Megatron-LM](https://github.com/NVIDIA/Megatron-LM) (Note: we used v3.0.2)
-#### Factual Nucleus Decoding
-Refer to this [link](https://github.com/NVIDIA/Megatron-LM/blob/main/megatron/text_generation/generation.py#L207) for nucleus sampling implementation in Megatron-LM repository.
-
-#### Sentence Completition Loss
-**Step 1. Prepare the training corpus:**
-
-```python
-  python preprocess_data_megatron_lm.py \
-      --input $CORPUS_PATH \
-      --output-prefix $OUTPUT_FILE_PREFIX \
-      --vocab-file gpt2-vocab.json \
-      --merge-file gpt2-merges.txt \
-      --tokenizer-type GPT2BPETokenizer \
-      --append-eod  --workers 20 \
-      --mask_type $MASKING_CHOICE_FOR_SC_LOSS_PIVOT
-```
-
-Possible choice for `$MASKING_CHOICE_FOR_SC_LOSS_PIVOT`:
-* `v2_all_after_ROOT`: ROOT Pivot 
-* `v3_all_after_half`: Half Pivot
-* `v5_RANDOM_Mask`: Random pivot
-
-**Step 2: Modify the Megatron-LM code to incorporate SC-loss masking**
-
-We just need to modify `get_batch()` function from <https://github.com/NVIDIA/Megatron-LM/blob/main/pretrain_gpt.py> file with below code snippet:
-
-```python
-def get_batch(data_iterator):
-    """Generate a batch"""
-    args = get_args()
-    tokenizer = get_tokenizer()
-
-    # Items and their type.
-    # keys = ['text'] # <- original code
-    keys = ['text', 'ne_mask'] # <- our code
-    datatype = torch.int64
-
-    # Broadcast data.
-    if data_iterator is not None:
-        data = next(data_iterator)
-    else:
-        data = None
-    data_b = mpu.broadcast_data(keys, data, datatype)
-
-    # Unpack.
-    tokens_ = data_b['text'].long()
-    labels = tokens_[:, 1:].contiguous()
-    tokens = tokens_[:, :-1].contiguous()
-
-    # Get the masks and postition ids.
-    attention_mask, loss_mask, position_ids = get_ltor_masks_and_position_ids(
-        tokens,
-        tokenizer.eod,
-        args.reset_position_ids,
-        args.reset_attention_mask,
-        args.eod_mask_loss)
-
-    # '''Below three lines are our code'''
-    if 'ne_mask' in keys:
-        loss_mask_ = data_b['ne_mask'].long()
-        loss_mask = loss_mask_[:, :-1].contiguous()
-        
-    return tokens, labels, loss_mask, attention_mask, position_ids
-```
-
-**Step 3: Use the provided script in Megtraon-LM repository (<https://github.com/NVIDIA/Megatron-LM#gpt-pretraining>) to continue training the Megatron-GPT with SC-loss**
-* Set `DATA_PATH` to the preprocessed files generated from Step 1.
-* Note that: since publicly available Megatron-LM checkpoint (345M) is smaller than the models used in our paper, same performance won't be replicated.
-
-## 4. Replicating our work with [Hugginface](https://github.com/huggingface/transformers) (v4.20.1)
-Please refer to this repository -> <https://github.com/nayeon7lee/factuality_enhanced_lm_hf>.
