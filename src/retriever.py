@@ -218,8 +218,8 @@ def obtain_relevant_evidences(claim, wiki_sents, k, method):
         evs.extend(sorted(zip(wiki_sents, relevance_scores), key=lambda x: -x[1])[:k])
         
     if method == 'emb_sim' or method == 'combined':
-        ev_embeddings = MODEL.encode(wiki_sents)
-        q_embedding = MODEL.encode(claim)
+        ev_embeddings = MODEL.encode(wiki_sents, show_progress_bar=False)
+        q_embedding = MODEL.encode(claim, show_progress_bar=False)
 
         hits = util.semantic_search(q_embedding, ev_embeddings, top_k=k)
         # print("[SENT_EMB]")

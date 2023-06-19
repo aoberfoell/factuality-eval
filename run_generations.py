@@ -8,10 +8,10 @@ from src.const import HOME_DIR, GEN_DIR
 # params
 # todo: add as command line args
 prompt_file = "fever_factual_final.jsonl"
-output_file = "gen_factual_bloom560m_greedy.jsonl"
-model_name = "bigscience/bloom-560m"
+output_file = "gen_factual_bloom3b_greedy.jsonl"
+model_name = "bigscience/bloom-3b"
 batch_size = 32 # batch size for generation
-max_new_tokens = 100 # num of tokens which are generated
+max_new_tokens = 150 # num of tokens which are generated
 
 # load prompts
 prompts = []
@@ -23,6 +23,7 @@ with open(prompt_path, "r") as f:
 print(f"Found {len(prompts)} prompts.")
         
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # load model
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
